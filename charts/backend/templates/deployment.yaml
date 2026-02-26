@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: um-backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: um-backend
+  template:
+    metadata:
+      labels:
+        app: um-backend
+    spec:
+      containers:
+      - name: user-management
+        image: {{ .Values.image }}
+        env:
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: postgres-password
+        - name: DATABASE_URL
+          value: "postgres://{{ .Values.db.user }}:$(DB_PASS)@{{ .Values.db.host }}:5432/{{ .Values.db.name }}?sslmode=disable"

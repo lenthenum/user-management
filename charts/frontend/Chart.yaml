@@ -1,0 +1,4 @@
+apiVersion: v2
+name: um-frontend
+description: A Helm chart user management frontend app
+version: 0.0.1

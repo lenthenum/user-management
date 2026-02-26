@@ -1,0 +1,2 @@
+image: "lenthenum/um-frontend:0.0.1"
+apiUrl: "http://localhost:8002"

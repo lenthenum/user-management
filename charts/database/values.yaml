@@ -1,0 +1,5 @@
+image: postgres:13
+user: postgres
+password: "very-secure-password"  # plain text password should not be pushed to git
+dbName: db
+storageSize: 100Mi
