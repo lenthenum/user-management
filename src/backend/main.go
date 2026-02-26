@@ -95,7 +95,10 @@ func getUsers(db *sql.DB) http.HandlerFunc {
 			log.Fatal(err)
 		}
 
-		json.NewEncoder(w).Encode(users)
+		err = json.NewEncoder(w).Encode(users)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -112,7 +115,10 @@ func getUser(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		json.NewEncoder(w).Encode(u)
+		err = json.NewEncoder(w).Encode(u)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -120,14 +126,20 @@ func getUser(db *sql.DB) http.HandlerFunc {
 func createUser(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var u User
-		json.NewDecoder(r.Body).Decode(&u)
-
-		err := db.QueryRow("INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id", u.Name, u.Email).Scan(&u.Id)
+		err := json.NewDecoder(r.Body).Decode(&u)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		json.NewEncoder(w).Encode(u)
+		err = db.QueryRow("INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id", u.Name, u.Email).Scan(&u.Id)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = json.NewEncoder(w).Encode(u)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -135,13 +147,16 @@ func createUser(db *sql.DB) http.HandlerFunc {
 func updateUser(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var u User
-		json.NewDecoder(r.Body).Decode(&u)
+		err := json.NewDecoder(r.Body).Decode(&u)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		vars := mux.Vars(r)
 		id := vars["id"]
 
 		// Execute the update query
-		_, err := db.Exec("UPDATE users SET name = $1, email = $2 WHERE id = $3", u.Name, u.Email, id)
+		_, err = db.Exec("UPDATE users SET name = $1, email = $2 WHERE id = $3", u.Name, u.Email, id)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -154,7 +169,10 @@ func updateUser(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Send the updated user data in the response
-		json.NewEncoder(w).Encode(updatedUser)
+		err = json.NewEncoder(w).Encode(updatedUser)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -177,7 +195,10 @@ func deleteUser(db *sql.DB) http.HandlerFunc {
 				return
 			}
 
-			json.NewEncoder(w).Encode("User deleted")
+			err = json.NewEncoder(w).Encode("User deleted")
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
