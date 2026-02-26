@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: um-frontend
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: um-frontend
+  template:
+    metadata:
+      labels:
+        app: um-frontend
+    spec:
+      containers:
+      - name: um-frontend
+        image: {{ .Values.image }}
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          value: {{ .Values.apiUrl }}
+        ports:
+        - containerPort: 3000
