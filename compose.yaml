@@ -3,7 +3,7 @@ services:
     container_name: nextapp
     image: nextapp:1.0.0
     build:
-      context: ./frontend
+      context: ./src/frontend
       dockerfile: next.dockerfile
     ports:
       - '3000:3000'
@@ -15,7 +15,7 @@ services:
     container_name: goapp
     image: goapp:1.0.0
     build:
-      context: ./backend
+      context: ./src/backend
       dockerfile: go.dockerfile
     environment:
       DATABASE_URL: 'postgres://postgres:postgres@db:5432/postgres?sslmode=disable'
