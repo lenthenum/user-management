@@ -4,7 +4,12 @@ metadata:
   name: um-frontend
   namespace: {{ .Release.Namespace }}
 spec:
-  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  replicas: {{ .Values.replicaCount | default 1 }}
   selector:
     matchLabels:
       app: um-frontend
@@ -13,11 +18,51 @@ spec:
       labels:
         app: um-frontend
     spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
       - name: um-frontend
-        image: {{ .Values.image }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
         env:
         - name: NEXT_PUBLIC_API_URL
-          value: {{ .Values.apiUrl }}
+          value: {{ .Values.apiUrl | quote }}
+        - name: NODE_ENV
+          value: "production"
         ports:
         - containerPort: 3000
+          name: http
+        
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+
+        livenessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3000
+          initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds | default 15 }}
+          periodSeconds: {{ .Values.probes.liveness.periodSeconds | default 20 }}
+        
+        readinessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3000
+          initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds | default 5 }}
+          periodSeconds: {{ .Values.probes.readiness.periodSeconds | default 10 }}
+        
+        startupProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3000
+          failureThreshold: 15
+          periodSeconds: 5
