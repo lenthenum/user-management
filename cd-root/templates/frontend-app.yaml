@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: frontend-app
+  namespace: argocd
+  # finalizers:
+  # - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: frontend
+    server: https://kubernetes.default.svc
+  project: default
+  revisionHistoryLimit: 4
+  source:
+    path: charts/frontend
+    repoURL: https://github.com/lenthenum/user-management.git
+    targetRevision: {{ .Values.deploy.revision }}
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true

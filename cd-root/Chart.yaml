@@ -1,0 +1,4 @@
+apiVersion: v2
+name: user-management
+description: A Helm chart user management application
+version: 0.0.1
