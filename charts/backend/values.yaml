@@ -14,3 +14,7 @@ probes:
   readiness:
     initialDelaySeconds: 5
     periodSeconds: 10
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
