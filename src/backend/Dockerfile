@@ -1,15 +1,17 @@
-FROM golang:1.16.3-alpine3.13
+FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
 
-# Download and install the dependencies:
-RUN go get -d -v ./...
-
-# Build the go app
 RUN go build -o api .
 
-EXPOSE 8000
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /app/api .
 
+EXPOSE 8000
 CMD ["./api"]
