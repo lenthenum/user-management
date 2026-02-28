@@ -21,13 +21,18 @@ spec:
           persistence:
             type: pvc
             enabled: true
-            existingClaim: loki
+            size: 5Gi
           securityContext:
             runAsGroup: 10001
             runAsUser: 10001
 
         promtail:
-          enabled: false
+          enabled: true
+          config:
+            logLevel: info
+            serverPort: 3101
+            clients:
+              - url: http://{{ .Release.Name }}:3100/loki/api/v1/push
 
         fluent-bit:
           enabled: false
@@ -43,7 +48,7 @@ spec:
           persistence:
             type: pvc
             enabled: true
-            existingClaim: grafana
+            size: 2Gi
           securityContext:
             runAsUser: 472
             runAsGroup: 472
@@ -61,9 +66,9 @@ spec:
           server:
             persistentVolume:
               enabled: true
-              existingClaim: prometheus-server
+              size: 10Gi
               accessModes:
-                - ReadWriteMany
+                - ReadWriteOnce
             resources:
               limits:
                 cpu: 800m
@@ -74,9 +79,9 @@ spec:
           alertmanager:
             persistentVolume:
               enabled: true
-              existingClaim: prometheus-alertmanager
+              size: 2Gi
               accessModes:
-                - ReadWriteMany
+                - ReadWriteOnce
             resources:
               limits:
                 cpu: 100m

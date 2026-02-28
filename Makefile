@@ -10,7 +10,7 @@ DB_PORT=5432
 
 # --- Cluster Management ---
 cluster-up:
-	kind create cluster --name $(CLUSTER_NAME)
+	kind create cluster --name $(CLUSTER_NAME) --config kind-config.yaml
 	kind export kubeconfig --name $(CLUSTER_NAME)
 
 cluster-down:
