@@ -67,9 +67,9 @@ jobs:
               "version": "${{ steps.tag_version.outputs.new_version }}",
               "appVersion": "${{ steps.tag_version.outputs.new_version }}"
             }
-          branch: main
+          targetBranch: main
           createPR: true
-          targetBranch: "release/backend/v${{ steps.tag_version.outputs.new_version }}"
+          branch: "release/backend/v${{ steps.tag_version.outputs.new_version }}"
           message: "chore: bump backend chart to ${{ steps.tag_version.outputs.new_version }} [skip ci]"
           token: ${{ secrets.GH_TOKEN }}
 
