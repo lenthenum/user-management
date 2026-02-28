@@ -1,6 +1,20 @@
-image: lenthenum/um-backend:0.0.1
+image:
+  repository: lenthenum/um-backend
+  tag: 0.0.1
 port: 8000
 db:
   host: postgres-service.backend.svc.cluster.local
   name: db
   user: postgres
+replicaCount: 2
+probes:
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 20
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10

@@ -1,24 +1,24 @@
 name: Frontend CI
+
 on:
   push:
     branches: [main]
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend.yml'
+      - 'src/frontend/**'
+      - '.github/workflows/frontend-ci.yaml'
   pull_request:
     branches: [main]
     paths:
-      - 'frontend/**'
+      - 'src/frontend/**'
 
 jobs:
   frontend-ci:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./src/frontend
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -27,16 +27,68 @@ jobs:
           cache: 'npm'
           cache-dependency-path: './src/frontend/package-lock.json'
 
-      - name: Install Dependencies
-        run: npm ci
+      - name: Install and Test
+        run: |
+          cd src/frontend
+          npm install --include=dev
+          npm ci
+          npm run lint
+          npm test
+          NODE_ENV=production npm run build
 
-      - name: Lint
-        run: npm run lint
+      - name: Determine Next Version
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          dry_run: true 
 
-      - name: Test
-        run: npm test
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build
-        run: npm run build
-        env:
-          NODE_ENV: production
+      - name: Build and Push Image
+        run: |
+          IF_PR="${{ github.event.pull_request.number }}"
+          BASE_TAG="${{ steps.tag_version.outputs.new_version }}"
+          
+          if [ -n "$IF_PR" ]; then
+            FINAL_TAG="${BASE_TAG}-pr${IF_PR}"
+          else
+            FINAL_TAG="${BASE_TAG}"
+          fi
+          
+          echo "Final Docker Tag: $FINAL_TAG"
+          cd src/frontend
+          docker build -t lenthenum/um-frontend:$FINAL_TAG .
+          docker push lenthenum/um-frontend:$FINAL_TAG
+
+      - name: Update Chart.yaml
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: fjogeleit/yaml-update-action@v0.16.1
+        with:
+          valueFile: 'charts/frontend/Chart.yaml' 
+          changes: |
+            {
+              "version": "${{ steps.tag_version.outputs.new_version }}",
+              "appVersion": "${{ steps.tag_version.outputs.new_version }}"
+            }
+          branch: main
+          createPR: true
+          targetBranch: "release/frontend/v${{ steps.tag_version.outputs.new_version }}"
+          message: "chore: bump frontend chart to ${{ steps.tag_version.outputs.new_version }} [skip ci]"
+          token: ${{ secrets.GH_TOKEN }}
+      
+      - name: Create Git Tag
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/frontend/v${{ steps.tag_version.outputs.new_version }}',
+              sha: context.sha
+            })
