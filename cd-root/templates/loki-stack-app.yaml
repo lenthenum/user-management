@@ -1,0 +1,133 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki-stack-app
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: loki
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    chart: loki-stack
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 2.9.10
+    helm:
+      values: |
+        loki:
+          enabled: true
+          persistence:
+            type: pvc
+            enabled: true
+            size: 5Gi
+          securityContext:
+            runAsGroup: 10001
+            runAsUser: 10001
+
+        promtail:
+          enabled: true
+          config:
+            logLevel: info
+            serverPort: 3101
+            clients:
+              - url: http://{{ .Release.Name }}:3100/loki/api/v1/push
+
+        fluent-bit:
+          enabled: false
+
+        grafana:
+          enabled: true
+          namespaceOverride: grafana
+          sidecar:
+            datasources:
+              enabled: false
+          image:
+            tag: 9.4.3
+          persistence:
+            type: pvc
+            enabled: true
+            size: 2Gi
+          securityContext:
+            runAsUser: 472
+            runAsGroup: 472
+          initChownData:
+            enabled: false
+
+        prometheus:
+          enabled: true
+          forceNamespace: prometheus
+          configmapReload:
+            prometheus:
+              enabled: false
+            alertmanager:
+              enabled: false
+          server:
+            persistentVolume:
+              enabled: true
+              size: 10Gi
+              accessModes:
+                - ReadWriteOnce
+            resources:
+              limits:
+                cpu: 800m
+                memory: 1Gi
+              requests:
+                cpu: 500m
+                memory: 512Mi
+          alertmanager:
+            persistentVolume:
+              enabled: true
+              size: 2Gi
+              accessModes:
+                - ReadWriteOnce
+            resources:
+              limits:
+                cpu: 100m
+                memory: 100Mi
+              requests:
+                cpu: 50m
+                memory: 50Mi
+          nodeExporter:
+            enabled: true
+            tolerations:
+              - key: node-role.kubernetes.io/master
+                effect: NoSchedule
+            resources:
+              limits:
+                cpu: 200m
+                memory: 50Mi
+              requests:
+                cpu: 100m
+                memory: 30Mi
+
+        filebeat:
+          enabled: false
+
+        logstash:
+          enabled: false
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loki
+  labels:
+    managed-by: argocd
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: grafana
+  labels:
+    managed-by: argocd
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prometheus
+  labels:
+    managed-by: argocd
