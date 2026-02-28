@@ -102,3 +102,27 @@ spec:
 
         logstash:
           enabled: false
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loki
+  labels:
+    managed-by: argocd
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: grafana
+  labels:
+    managed-by: argocd
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prometheus
+  labels:
+    managed-by: argocd
