@@ -57,7 +57,7 @@ jobs:
 
       - name: Update Chart.yaml
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: fjogeleit/yaml-update-action@v0.14
+        uses: fjogeleit/yaml-update-action@v0.16.1
         with:
           valueFile: 'charts/backend/Chart.yaml' 
           changes: |
