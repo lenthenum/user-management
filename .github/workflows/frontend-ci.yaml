@@ -30,13 +30,11 @@ jobs:
       - name: Install and Test
         run: |
           cd src/frontend
-          npm install --save-dev typescript @types/react @types/node
+          npm install --include=dev
           npm ci
           npm run lint
           npm test
-          npm run build
-        env:
-          NODE_ENV: production
+          NODE_ENV=production npm run build
 
       - name: Determine Next Version
         id: tag_version
@@ -78,5 +76,6 @@ jobs:
               "appVersion": "${{ steps.tag_version.outputs.new_version }}"
             }
           branch: main
+          createPR: true
           message: "chore: bump frontend chart to ${{ steps.tag_version.outputs.new_version }} [skip ci]"
           token: ${{ secrets.GITHUB_TOKEN }}

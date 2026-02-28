@@ -67,5 +67,6 @@ jobs:
               "appVersion": "${{ steps.tag_version.outputs.new_version }}"
             }
           branch: main
+          createPR: true
           message: "chore: bump backend chart to ${{ steps.tag_version.outputs.new_version }} [skip ci]"
           token: ${{ secrets.GITHUB_TOKEN }}
