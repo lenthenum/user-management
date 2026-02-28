@@ -52,7 +52,8 @@ jobs:
           fi
           
           echo "Final Docker Tag: $FINAL_TAG"
-          docker build -t lenthenum/um-backend:$FINAL_TAG -f src/backend/Dockerfile .
+          cd src/frontend
+          docker build -t lenthenum/um-backend:$FINAL_TAG .
           docker push lenthenum/um-backend:$FINAL_TAG
 
       - name: Update Chart.yaml
