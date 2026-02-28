@@ -23,6 +23,7 @@ spec:
         runAsUser: 999
       containers:
       - name: postgres
+        image: {{ .Values.image }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
