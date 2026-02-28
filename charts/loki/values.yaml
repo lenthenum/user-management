@@ -1,0 +1,106 @@
+loki-stack:
+  loki:
+    datasource:
+      enabled: false
+    enabled: true
+    persistence:
+      type: pvc
+      enabled: true
+      size: 5Gi
+    securityContext:
+      runAsGroup: 10001
+      runAsUser: 10001
+
+  promtail:
+    enabled: true
+    forceNamespace: promtail
+    config:
+      logLevel: info
+      serverPort: 3101
+      clients:
+        - url: http://loki-stack-app.loki.svc.cluster.local:3100/loki/api/v1/push
+
+  fluent-bit:
+    enabled: false
+
+  grafana:
+    enabled: true
+    namespaceOverride: grafana
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        searchNamespace: ALL
+      datasources:
+        enabled: true
+        label: grafana_datasource
+        labelValue: "3"
+        searchNamespace: ALL
+    image:
+      tag: 9.4.3
+    persistence:
+      type: pvc
+      enabled: true
+      size: 2Gi
+    securityContext:
+      runAsUser: 472
+      runAsGroup: 472
+    initChownData:
+      enabled: false
+
+  prometheus:
+    enabled: true
+    forceNamespace: prometheus
+    configmapReload:
+      prometheus:
+        enabled: false
+      alertmanager:
+        enabled: false
+    server:
+      persistentVolume:
+        enabled: true
+        size: 10Gi
+        accessModes:
+          - ReadWriteOnce
+      resources:
+        limits:
+          cpu: 800m
+          memory: 1Gi
+        requests:
+          cpu: 500m
+          memory: 512Mi
+    alertmanager:
+      persistentVolume:
+        enabled: true
+        size: 2Gi
+        accessModes:
+          - ReadWriteOnce
+      resources:
+        limits:
+          cpu: 100m
+          memory: 100Mi
+        requests:
+          cpu: 50m
+          memory: 50Mi
+    nodeExporter:
+      enabled: true
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      resources:
+        limits:
+          cpu: 200m
+          memory: 50Mi
+        requests:
+          cpu: 100m
+          memory: 30Mi
+
+  filebeat:
+    enabled: false
+
+  logstash:
+    enabled: false
+
+  datasource:
+    enabled: false

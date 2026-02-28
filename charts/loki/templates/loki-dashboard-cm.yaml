@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-loki-dashboard
+  namespace: grafana
+  labels:
+    grafana_dashboard: "1"
+data:
+  loki-overview.json: |-
+{{ .Files.Get "dashboards/loki-overview.json" | indent 4 }}
