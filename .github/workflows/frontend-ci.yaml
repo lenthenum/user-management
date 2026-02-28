@@ -77,5 +77,6 @@ jobs:
             }
           branch: main
           createPR: true
+          branchName: "version-bump-frontend-${{ steps.tag_version.outputs.new_version }}"
           message: "chore: bump frontend chart to ${{ steps.tag_version.outputs.new_version }} [skip ci]"
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
