@@ -3,12 +3,13 @@ kind: Application
 metadata:
   name: cd-root-app
   namespace: argocd
+  labels:
+    argocd.argoproj.io/instance: cd-root-app
 spec:
   destination:
     namespace: argocd
     server: https://kubernetes.default.svc
   project: default
-  revisionHistoryLimit: 4
   source:
     path: cd-root
     repoURL: https://github.com/lenthenum/user-management.git

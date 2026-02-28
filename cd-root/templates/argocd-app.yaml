@@ -32,28 +32,28 @@ stringData:
   url: https://github.com/argoproj/argo-helm
   project: default
 ---
-# apiVersion: argoproj.io/v1alpha1
-# kind: Application
-# metadata:
-#   name: argocd
-#   namespace: argocd
-# spec:
-#   project: default
-#   source:
-#     repoURL: 'https://github.com/argoproj/argo-helm.git'
-#     targetRevision: argo-cd-9.4.5
-#     path: charts/argo-cd
-#     helm:
-#       values: |
-#         server:
-#           extraArgs:
-#             - --insecure
-#   destination:
-#     server: 'https://kubernetes.default.svc'
-#     namespace: argocd
-#   syncPolicy:
-#     syncOptions:
-#     - Exclude=NetworkPolicy
-#     automated:
-#       selfHeal: true
-#       prune: false
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/instance: cd-root-app
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/argoproj/argo-helm.git'
+    targetRevision: argo-cd-9.4.5
+    path: charts/argo-cd
+    helm:
+      values: |
+        server:
+          extraArgs:
+            - --insecure
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
