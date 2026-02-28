@@ -6,6 +6,8 @@ metadata:
 spec:
   serviceName: "postgres-service"
   replicas: 1
+  updateStrategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       app: postgres
@@ -14,9 +16,18 @@ spec:
       labels:
         app: postgres
     spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        fsGroup: 999
+        runAsNonRoot: true
+        runAsUser: 999
       containers:
       - name: postgres
-        image: {{ .Values.image }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         env:
         - name: POSTGRES_USER
           value: {{ .Values.user }}
@@ -27,11 +38,43 @@ spec:
             secretKeyRef:
               name: db-credentials
               key: postgres-password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
         ports:
         - containerPort: 5432
+          name: tcp-postgresql
+        
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+        startupProbe:
+          exec:
+            command: ["pg_isready", "-U", {{ .Values.user | quote }}]
+          initialDelaySeconds: 10
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", {{ .Values.user | quote }}]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command: ["psql", "-U", {{ .Values.user | quote }}, "-d", {{ .Values.dbName | quote }}, "-c", "SELECT 1"]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        
         volumeMounts:
         - name: pgdata
           mountPath: /var/lib/postgresql/data
+          subPath: postgres-db
+
   volumeClaimTemplates:
   - metadata:
       name: pgdata
