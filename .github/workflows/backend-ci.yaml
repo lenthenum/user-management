@@ -32,7 +32,8 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ secrets.GH_TOKEN }}
-          dry_run: true 
+          dry_run: true
+          tag_prefix: backend/v
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -52,7 +53,7 @@ jobs:
           fi
           
           echo "Final Docker Tag: $FINAL_TAG"
-          cd src/frontend
+          cd src/backend
           docker build -t lenthenum/um-backend:$FINAL_TAG .
           docker push lenthenum/um-backend:$FINAL_TAG
 
