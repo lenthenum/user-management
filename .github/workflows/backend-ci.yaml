@@ -52,7 +52,7 @@ jobs:
           fi
           
           echo "Final Docker Tag: $FINAL_TAG"
-          cd src/frontend
+          cd src/backend
           docker build -t lenthenum/um-backend:$FINAL_TAG .
           docker push lenthenum/um-backend:$FINAL_TAG
 
