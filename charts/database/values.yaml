@@ -2,6 +2,6 @@ image:
   repository: postgres
   tag: 15-alpine
 user: postgres
-password: "very-secure-password"  # plain text password should not be pushed to git
+# password: "very-secure-password"  # plain text password should not be pushed to git, use sealed secrets
 dbName: db
 storageSize: 1Gi

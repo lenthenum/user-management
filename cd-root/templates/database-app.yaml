@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: database-app
+  namespace: argocd
+spec:
+  destination:
+    namespace: backend
+    server: https://kubernetes.default.svc
+  project: default
+  revisionHistoryLimit: 4
+  source:
+    path: charts/database
+    repoURL: https://github.com/lenthenum/user-management.git
+    targetRevision: {{ .Values.deploy.revision }}
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true

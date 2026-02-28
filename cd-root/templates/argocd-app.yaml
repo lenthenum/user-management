@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-management-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  url: https://github.com/lenthenum/user-management
+  project: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sealed-secrets-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  url: https://github.com/bitnami-labs/sealed-secrets
+  project: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  url: https://github.com/argoproj/argo-helm
+  project: default
+---
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: argocd
+#   namespace: argocd
+# spec:
+#   project: default
+#   source:
+#     repoURL: 'https://github.com/argoproj/argo-helm.git'
+#     targetRevision: argo-cd-9.4.5
+#     path: charts/argo-cd
+#     helm:
+#       values: |
+#         server:
+#           extraArgs:
+#             - --insecure
+#   destination:
+#     server: 'https://kubernetes.default.svc'
+#     namespace: argocd
+#   syncPolicy:
+#     syncOptions:
+#     - Exclude=NetworkPolicy
+#     automated:
+#       selfHeal: true
+#       prune: false
