@@ -24,7 +24,7 @@ spec:
         runAsUser: 1000
       containers:
       - name: um-frontend
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        image: {{ .Values.image.repository }}:{{ .Chart.Version }}
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
