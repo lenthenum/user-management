@@ -25,7 +25,7 @@
 
 ### Alert Example
 
-**`prometheus-rules.yaml**`:
+`prometheus-rules.yaml`:
 
 ```yaml
 groups:

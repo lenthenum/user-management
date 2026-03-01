@@ -1,10 +1,10 @@
-# 🚀 Full-Stack Microservices Kubernetes Project
+# Full-Stack Microservices Kubernetes Project
 
 This repository contains a complete, production-ready Kubernetes orchestration for a microservices application, featuring a **Go Backend**, **React Frontend**, and **PostgreSQL Database**. The project demonstrates advanced DevOps practices including GitOps, automated CI/CD, and a full observability stack.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 * **`src/`**: Source code for the Frontend and Backend services.
 * **`charts/`**: Helm charts for individual services (Backend, Frontend, Database, Loki, Jaeger).
@@ -14,7 +14,7 @@ This repository contains a complete, production-ready Kubernetes orchestration f
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 * **Orchestration**: Kubernetes (Kind)
 * **CI/CD**: GitHub Actions
@@ -25,7 +25,7 @@ This repository contains a complete, production-ready Kubernetes orchestration f
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 Ensure you have `docker`, `kind`, `kubectl`, and `helm` installed.
 
@@ -52,7 +52,7 @@ Once the deployment finishes, use these commands in separate terminals to access
 
 ---
 
-## 🛡️ Security & Reliability
+## Security & Reliability
 
 * **Zero-Trust Networking**: Implemented via Kubernetes Network Policies and Istio mTLS.
 * **Self-Healing**: Configured with Liveness and Readiness probes to ensure traffic only hits healthy pods.
@@ -61,7 +61,7 @@ Once the deployment finishes, use these commands in separate terminals to access
 
 ---
 
-## 📊 Observability
+## Observability
 
 * **Logging**: Centralized logs via **Loki**, viewable in Grafana.
 * **Tracing**: Distributed tracing via **Jaeger** to debug request latency across services.
@@ -69,7 +69,7 @@ Once the deployment finishes, use these commands in separate terminals to access
 
 ---
 
-## 🧹 Cleanup
+## Cleanup
 
 To delete the cluster and all resources:
 
