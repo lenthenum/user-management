@@ -18,3 +18,14 @@ data:
       jsonData:
         maxLines: 1000
       uid: "custom-loki-datasource"
+      jsonData:
+        derivedFields:
+          - datasourceUid: jaeger-datasource
+            matcherRegex: '"trace_id":"(?P<value>[^"]+)"'
+            name: TraceID
+            url: '$${__value.raw}'
+    - name: Jaeger
+      type: jaeger
+      uid: jaeger-datasource
+      url: http://jaeger-query.jaeger.svc.cluster.local:16686
+      access: proxy

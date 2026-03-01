@@ -8,9 +8,14 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 type User struct {
@@ -21,6 +26,21 @@ type User struct {
 
 var logger *slog.Logger
 
+func initTracer() *sdktrace.TracerProvider {
+	ctx := context.Background()
+	exporter, _ := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint("jaeger-collector.jaeger.svc.cluster.local:4317"))
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("go-user-api"),
+		)),
+	)
+	otel.SetTracerProvider(tp)
+	return tp
+}
+
 func init() {
 	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(
 		"service_name", "go-user-api",
@@ -29,6 +49,10 @@ func init() {
 }
 
 func main() {
+	// NEW: Start Tracer
+	tp := initTracer()
+	defer tp.Shutdown(context.Background())
+
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		logger.Error("database connection failed", "error", err)
@@ -43,10 +67,13 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-
 	router.Use(requestIDMiddleware)
 
-	router.HandleFunc("/healthz", healthCheck(db)).Methods("GET")
+	router.HandleFunc("/ready", healthCheck(db)).Methods("GET")
+	router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "OK")
+	})
 
 	router.HandleFunc("/api/go/users", getUsers(db)).Methods("GET")
 	router.HandleFunc("/api/go/users", createUser(db)).Methods("POST")
@@ -56,9 +83,10 @@ func main() {
 
 	enhancedRouter := enableCORS(jsonContentTypeMiddleware(router))
 
-	logger.Info("server starting", "port", 8000)
+	fmt.Println("Server starting on :8000...")
 	if err := http.ListenAndServe(":8000", enhancedRouter); err != nil {
-		logger.Error("server crashed", "error", err)
+		logger.Error("server failed", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -102,11 +130,15 @@ func jsonContentTypeMiddleware(next http.Handler) http.Handler {
 
 func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tracer := otel.Tracer("go-user-api")
+		ctx, span := tracer.Start(r.Context(), fmt.Sprintf("%s %s", r.Method, r.URL.Path))
+		defer span.End()
+
 		traceID := r.Header.Get("X-Trace-ID")
 		if traceID == "" {
-			traceID = uuid.New().String()
+			traceID = span.SpanContext().TraceID().String()
 		}
-		ctx := context.WithValue(r.Context(), "trace_id", traceID)
+		ctx = context.WithValue(ctx, "trace_id", traceID)
 		w.Header().Set("X-Trace-ID", traceID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
