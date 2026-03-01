@@ -1,0 +1,60 @@
+{
+  "annotations": { "list": [ { "builtIn": 1, "datasource": { "type": "grafana", "uid": "-- Grafana --" }, "enable": true, "hide": true, "name": "Annotations & Alerts", "type": "dashboard" } ] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "title": "Error Rate (per minute)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "loki" },
+      "targets": [
+        {
+          "expr": "sum by (msg) (count_over_time({app=~\"$service\"} | json | level=~\"(?i)ERROR|ERR\" [$__interval]))",
+          "legendFormat": "{{msg}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10 }, "unit": "reqps" } }
+    },
+    {
+      "title": "Log Level Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "loki" },
+      "targets": [
+        { "expr": "sum by (level) (count_over_time({app=~\"$service\"} | json [$__range]))" }
+      ],
+      "options": { "legend": { "displayMode": "table", "placement": "right" } }
+    },
+    {
+      "title": "Recent Logs & Trace IDs",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "loki" },
+      "targets": [
+        { "expr": "{app=~\"$service\"} | json" }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending", "wrapLogLines": true }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "loki" },
+        "definition": "label_values(app)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "refresh": 1,
+        "query": "label_values(app)",
+        "allValue": ".+"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Loki - Service Logs",
+  "uid": "obs-01"
+}
