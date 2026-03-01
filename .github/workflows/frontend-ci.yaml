@@ -50,6 +50,25 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: src/frontend
+
+      - name: Build Local Image
+        run: |
+          cd src/frontend
+          docker build -t lenthenum/um-frontend:scan-tmp .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'lenthenum/um-frontend:scan-tmp'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
       - name: Build and Push Image
         run: |
           IF_PR="${{ github.event.pull_request.number }}"
