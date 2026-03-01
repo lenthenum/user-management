@@ -1,7 +1,6 @@
 image:
   repository: lenthenum/um-frontend
-  tag: 0.0.1
-apiUrl: "http://localhost:8002"
+apiUrl: ""
 replicaCount: 2
 probes:
   liveness:

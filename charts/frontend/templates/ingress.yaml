@@ -1,0 +1,25 @@
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: um-unified-ingress
+#   namespace: {{ .Release.Namespace }}
+#   annotations:
+#     kubernetes.io/ingress.class: nginx
+# spec:
+#   rules:
+#   - http:
+#       paths:
+#       - path: /api/go
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: um-backend.backend.svc.cluster.local
+#             port:
+#               number: 8000
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: um-frontend-service
+#             port:
+#               number: 80

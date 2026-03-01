@@ -16,6 +16,7 @@ spec:
   template:
     metadata:
       labels:
+        app-group: um-stack
         app: um-frontend
     spec:
       terminationGracePeriodSeconds: 30
@@ -44,7 +45,7 @@ spec:
             memory: "128Mi"
           limits:
             cpu: "300m"
-            memory: "256Mi"
+            memory: "512Mi"
 
         livenessProbe:
           httpGet:

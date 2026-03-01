@@ -1,6 +1,5 @@
 image:
   repository: lenthenum/um-backend
-  tag: 0.0.1
 port: 8000
 db:
   host: postgres-service.backend.svc.cluster.local
