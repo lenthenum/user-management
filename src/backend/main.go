@@ -61,14 +61,14 @@ func main() {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT, email TEXT)")
-	if err != nil {
-		logger.Error("migration failed", "error", err)
-		os.Exit(1)
-	}
+    _, err = db.Exec("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT, email TEXT)")
+    if err != nil {
+        logger.Error("migration failed", "error", err)
+        os.Exit(1)
+    }
 
-	router := mux.NewRouter()
-	router.Use(requestIDMiddleware)
+    router := mux.NewRouter()
+    router.Use(requestIDMiddleware)
 
 	router.HandleFunc("/ready", healthCheck(db)).Methods("GET")
 	router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -76,19 +76,19 @@ func main() {
 		fmt.Fprint(w, "OK")
 	})
 
-	router.HandleFunc("/api/go/users", getUsers(db)).Methods("GET")
-	router.HandleFunc("/api/go/users", createUser(db)).Methods("POST")
-	router.HandleFunc("/api/go/users/{id}", getUser(db)).Methods("GET")
-	router.HandleFunc("/api/go/users/{id}", updateUser(db)).Methods("PUT")
-	router.HandleFunc("/api/go/users/{id}", deleteUser(db)).Methods("DELETE")
+    router.HandleFunc("/api/go/users", getUsers(db)).Methods("GET")
+    router.HandleFunc("/api/go/users", createUser(db)).Methods("POST")
+    router.HandleFunc("/api/go/users/{id}", getUser(db)).Methods("GET")
+    router.HandleFunc("/api/go/users/{id}", updateUser(db)).Methods("PUT")
+    router.HandleFunc("/api/go/users/{id}", deleteUser(db)).Methods("DELETE")
 
-	enhancedRouter := enableCORS(jsonContentTypeMiddleware(router))
+    enhancedRouter := enableCORS(jsonContentTypeMiddleware(router))
 
-	fmt.Println("Server starting on :8000...")
-	if err := http.ListenAndServe(":8000", enhancedRouter); err != nil {
-		logger.Error("server failed", "error", err)
-		os.Exit(1)
-	}
+    fmt.Println("Server starting on :8000...")
+    if err := http.ListenAndServe(":8000", enhancedRouter); err != nil {
+        logger.Error("server failed", "error", err)
+        os.Exit(1)
+    }
 }
 
 func healthCheck(db *sql.DB) http.HandlerFunc {
