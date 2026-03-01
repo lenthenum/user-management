@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"log/slog" // Standard library for Go 1.22+
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -19,13 +19,9 @@ type User struct {
 	Email string `json:"email"`
 }
 
-// Global logger instance
 var logger *slog.Logger
 
 func init() {
-	// A. Structured Logging (JSON)
-	// Loki handles high-cardinality data better when labels like service_name 
-	// are included in the JSON object.
 	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(
 		"service_name", "go-user-api",
 		"env", "production",
@@ -48,7 +44,6 @@ func main() {
 
 	router := mux.NewRouter()
 
-	// B. Trace/Log Correlation Middleware
 	router.Use(requestIDMiddleware)
 
 	router.HandleFunc("/healthz", healthCheck(db)).Methods("GET")
@@ -62,15 +57,50 @@ func main() {
 
 	logger.Info("server starting", "port", 8000)
 	if err := http.ListenAndServe(":8000", enhancedRouter); err != nil {
-		logger.Error("server exit", "error", err)
+		logger.Error("server crashed", "error", err)
 	}
 }
 
-// --- MIDDLEWARE ---
+func healthCheck(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		traceID, _ := r.Context().Value("trace_id").(string)
+		err := db.Ping()
+		if err != nil {
+			logger.Error("healthcheck: db unreachable", "error", err, "trace_id", traceID)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "unhealthy", "error": "database unreachable"})
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+	}
+}
+
+func enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Trace-ID")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func jsonContentTypeMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		next.ServeHTTP(w, r)
+	})
+}
 
 func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// B. Trace Correlation: Generate or propagate trace_id
 		traceID := r.Header.Get("X-Trace-ID")
 		if traceID == "" {
 			traceID = uuid.New().String()
@@ -80,23 +110,6 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
-
-func healthCheck(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		traceID, _ := r.Context().Value("trace_id").(string)
-		err := db.Ping()
-		if err != nil {
-			logger.Error("healthcheck failed", "error", err, "trace_id", traceID)
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_ = json.NewEncoder(w).Encode(map[string]string{"status": "unhealthy"})
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
-	}
-}
-
-// --- HANDLERS ---
 
 func getUsers(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -118,8 +131,8 @@ func getUsers(db *sql.DB) http.HandlerFunc {
 			}
 			users = append(users, u)
 		}
-		
-		logger.Info("fetched users", "count", len(users), "trace_id", traceID)
+
+		logger.Info("getUsers called", "count", len(users), "trace_id", traceID)
 		if err := json.NewEncoder(w).Encode(users); err != nil {
 			logger.Error("encode failed", "error", err, "trace_id", traceID)
 		}
@@ -139,6 +152,7 @@ func getUser(db *sql.DB) http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+
 		if err := json.NewEncoder(w).Encode(u); err != nil {
 			logger.Error("encode failed", "error", err, "trace_id", traceID)
 		}
@@ -150,7 +164,7 @@ func createUser(db *sql.DB) http.HandlerFunc {
 		traceID, _ := r.Context().Value("trace_id").(string)
 		var u User
 		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-			logger.Warn("invalid payload", "trace_id", traceID)
+			logger.Error("decode failed", "error", err, "trace_id", traceID)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -174,6 +188,7 @@ func updateUser(db *sql.DB) http.HandlerFunc {
 		traceID, _ := r.Context().Value("trace_id").(string)
 		var u User
 		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+			logger.Error("decode failed", "error", err, "trace_id", traceID)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -183,15 +198,21 @@ func updateUser(db *sql.DB) http.HandlerFunc {
 
 		_, err := db.Exec("UPDATE users SET name = $1, email = $2 WHERE id = $3", u.Name, u.Email, id)
 		if err != nil {
-			logger.Error("update failed", "id", id, "trace_id", traceID)
+			logger.Error("update failed", "error", err, "id", id, "trace_id", traceID)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		var updatedUser User
 		err = db.QueryRow("SELECT id, name, email FROM users WHERE id = $1", id).Scan(&updatedUser.Id, &updatedUser.Name, &updatedUser.Email)
-		if err == nil {
-			_ = json.NewEncoder(w).Encode(updatedUser)
+		if err != nil {
+			logger.Error("post-update fetch failed", "error", err, "id", id, "trace_id", traceID)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(updatedUser); err != nil {
+			logger.Error("encode failed", "error", err, "trace_id", traceID)
 		}
 	}
 }
@@ -204,34 +225,21 @@ func deleteUser(db *sql.DB) http.HandlerFunc {
 
 		_, err := db.Exec("DELETE FROM users WHERE id = $1", id)
 		if err != nil {
-			logger.Error("delete failed", "id", id, "trace_id", traceID)
-			w.WriteHeader(http.StatusInternalServerError)
+			logger.Warn("delete failed: user not found", "id", id, "trace_id", traceID)
+			w.WriteHeader(http.StatusNotFound)
 			return
-		}
+		} else {
+			_, err := db.Exec("DELETE FROM users WHERE id = $1", id)
+			if err != nil {
+				logger.Error("delete execution failed", "error", err, "id", id, "trace_id", traceID)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 
-		logger.Info("user deleted", "id", id, "trace_id", traceID)
-		_ = json.NewEncoder(w).Encode("User deleted")
+			logger.Info("user deleted", "id", id, "trace_id", traceID)
+			if err := json.NewEncoder(w).Encode("User deleted"); err != nil {
+				logger.Error("encode failed", "error", err, "trace_id", traceID)
+			}
+		}
 	}
-}
-
-// --- UTILS ---
-
-func enableCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Trace-ID")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func jsonContentTypeMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-	})
 }
