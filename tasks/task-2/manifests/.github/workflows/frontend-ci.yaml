@@ -1,0 +1,110 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/frontend/**'
+      - '.github/workflows/frontend-ci.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/frontend/**'
+
+jobs:
+  frontend-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './src/frontend/package-lock.json'
+
+      - name: Install and Test
+        run: |
+          cd src/frontend
+          npm install --include=dev
+          npm ci
+          npm run lint
+          npm test
+          NODE_ENV=production npm run build
+
+      - name: Determine Next Version
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          dry_run: true
+          tag_prefix: frontend/v
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: src/frontend
+
+      - name: Build Local Image
+        run: |
+          cd src/frontend
+          docker build -t lenthenum/um-frontend:scan-tmp .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'lenthenum/um-frontend:scan-tmp'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Build and Push Image
+        run: |
+          IF_PR="${{ github.event.pull_request.number }}"
+          BASE_TAG="${{ steps.tag_version.outputs.new_version }}"
+          
+          if [ -n "$IF_PR" ]; then
+            FINAL_TAG="${BASE_TAG}-pr${IF_PR}"
+          else
+            FINAL_TAG="${BASE_TAG}"
+          fi
+          
+          echo "Final Docker Tag: $FINAL_TAG"
+          cd src/frontend
+          docker build -t lenthenum/um-frontend:$FINAL_TAG .
+          docker push lenthenum/um-frontend:$FINAL_TAG
+
+      - name: Update Chart.yaml
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: fjogeleit/yaml-update-action@v0.16.1
+        with:
+          valueFile: 'charts/frontend/Chart.yaml' 
+          changes: |
+            {
+              "version": "${{ steps.tag_version.outputs.new_version }}",
+              "appVersion": "${{ steps.tag_version.outputs.new_version }}"
+            }
+          branch: main
+          createPR: false
+          targetBranch: "release/frontend/v${{ steps.tag_version.outputs.new_version }}"
+          message: "chore: bump frontend chart to ${{ steps.tag_version.outputs.new_version }} [skip ci]"
+          token: ${{ secrets.GH_TOKEN }}
+      
+      - name: Bump Version
+        id: tag_version_final
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          dry_run: false
+          tag_prefix: frontend/v
