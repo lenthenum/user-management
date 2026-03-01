@@ -30,7 +30,6 @@ build-backend:
 deploy-argocd:
 	kubectl create namespace argocd
 	kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.3.2/manifests/install.yaml
-# 	kubectl delete networkpolicy -n argocd argocd-repo-server-network-policy
 	kubectl -n argocd wait --for=condition=available --timeout=300s --all deployments
 
 .PHONY: argocd-password
