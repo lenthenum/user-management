@@ -16,6 +16,7 @@ spec:
   template:
     metadata:
       labels:
+        app-group: um-stack
         app: um-backend
     spec:
       terminationGracePeriodSeconds: 30

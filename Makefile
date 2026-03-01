@@ -41,6 +41,11 @@ login-argocd:
 	kubectl port-forward service/argocd-server -n argocd 8083:443 &          
 	argocd login localhost:8083 --grpc-web --insecure --username admin --password $$(kubectl get secret -n argocd argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
 
+.PHONY: deploy-ingress
+deploy-ingress:
+	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+	kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=90s
+
 # --- Troubleshooting & Access ---
 pf-ui:
 	kubectl port-forward svc/um-frontend-service $(UI_PORT):3000 -n $(FRONTEND_NAMESPACE)
