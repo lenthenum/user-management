@@ -1,8 +1,47 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: allow-ingress-to-frontend
+  namespace: frontend
+spec:
+  podSelector:
+    matchLabels:
+      app: um-frontend
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-db
+  namespace: backend
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app-group: um-stack
+      podSelector:
+        matchLabels:
+          app: um-backend
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: allow-ingress-to-backend
-  namespace: {{ .Release.Namespace }}
+  namespace: backend
 spec:
   podSelector:
     matchLabels:
@@ -20,7 +59,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-backend-egress
-  namespace: {{ .Release.Namespace }}
+  namespace: backend
 spec:
   podSelector:
     matchLabels:
