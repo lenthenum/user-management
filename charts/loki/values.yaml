@@ -37,6 +37,15 @@ loki-stack:
         label: grafana_datasource
         labelValue: "3"
         searchNamespace: ALL
+    additionalDataSources:
+    - name: Jaeger
+      type: jaeger
+      uid: jaeger-datasource
+      url: http://jaeger-query.default.svc.cluster.local:16686
+      access: proxy
+      jsonData:
+        lokiSearch:
+          datasourceUid: custom-loki-datasource
     image:
       tag: 9.4.3
     persistence:

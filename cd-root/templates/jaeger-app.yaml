@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jaeger-app
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    namespace: jaeger
+    server: https://kubernetes.default.svc
+  source:
+    path: charts/jaeger
+    repoURL: https://github.com/lenthenum/user-management.git
+    targetRevision: {{ .Values.deploy.revision }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
