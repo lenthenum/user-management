@@ -3,4 +3,5 @@ kind: Namespace
 metadata:
   name: frontend
   labels:
+    app-group: um-stack
     managed-by: argocd
