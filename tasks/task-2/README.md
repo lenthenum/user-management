@@ -51,3 +51,9 @@ spec:
         - values.yaml
         - values-prod.yaml 
 ```
+
+## 4. Further Improvements
+
+1. Currently one github action workflow has single job which makes execution serial. For faster execution, split the action into multiple jobs.
+2. Add an ArgoCD application to control ArgoCD itself.
+3. Implement multiple values file structure to override values per environment type, hyperscalar and landscape
