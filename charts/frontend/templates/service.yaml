@@ -9,7 +9,7 @@ spec:
     app: um-frontend
   ports:
   - protocol: TCP
-    port: 3000
+    port: 80
     targetPort: 3000
   
 ---
@@ -20,6 +20,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   type: ExternalName
-  externalName: um-backend.backend-ns.svc.cluster.local
+  externalName: um-backend.backend.svc.cluster.local
   ports:
   - port: 8000

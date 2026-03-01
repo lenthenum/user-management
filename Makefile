@@ -30,6 +30,7 @@ build-backend:
 deploy-argocd:
 	kubectl create namespace argocd
 	kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.3.2/manifests/install.yaml
+# 	kubectl delete networkpolicy -n argocd argocd-repo-server-network-policy
 	kubectl -n argocd wait --for=condition=available --timeout=300s --all deployments
 
 .PHONY: argocd-password
@@ -45,6 +46,10 @@ login-argocd:
 deploy-ingress:
 	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 	kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=90s
+
+.PHONY: deploy-app
+deploy-app:
+	helm install root ./cd-root -n argocd
 
 # --- Troubleshooting & Access ---
 pf-ui:

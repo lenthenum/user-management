@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -29,36 +30,41 @@ func init() {
 }
 
 func main() {
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
-	if err != nil {
-		logger.Error("database connection failed", "error", err)
-		os.Exit(1)
-	}
-	defer db.Close()
+    db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+    if err != nil {
+        logger.Error("database connection failed", "error", err)
+        os.Exit(1)
+    }
+    defer db.Close()
 
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT, email TEXT)")
-	if err != nil {
-		logger.Error("migration failed", "error", err)
-		os.Exit(1)
-	}
+    _, err = db.Exec("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT, email TEXT)")
+    if err != nil {
+        logger.Error("migration failed", "error", err)
+        os.Exit(1)
+    }
 
-	router := mux.NewRouter()
+    router := mux.NewRouter()
+    router.Use(requestIDMiddleware)
 
-	router.Use(requestIDMiddleware)
+    router.HandleFunc("/ready", healthCheck(db)).Methods("GET")
+    router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+        w.WriteHeader(http.StatusOK)
+        fmt.Fprint(w, "OK")
+    })
 
-	router.HandleFunc("/healthz", healthCheck(db)).Methods("GET")
-	router.HandleFunc("/api/go/users", getUsers(db)).Methods("GET")
-	router.HandleFunc("/api/go/users", createUser(db)).Methods("POST")
-	router.HandleFunc("/api/go/users/{id}", getUser(db)).Methods("GET")
-	router.HandleFunc("/api/go/users/{id}", updateUser(db)).Methods("PUT")
-	router.HandleFunc("/api/go/users/{id}", deleteUser(db)).Methods("DELETE")
+    router.HandleFunc("/api/go/users", getUsers(db)).Methods("GET")
+    router.HandleFunc("/api/go/users", createUser(db)).Methods("POST")
+    router.HandleFunc("/api/go/users/{id}", getUser(db)).Methods("GET")
+    router.HandleFunc("/api/go/users/{id}", updateUser(db)).Methods("PUT")
+    router.HandleFunc("/api/go/users/{id}", deleteUser(db)).Methods("DELETE")
 
-	enhancedRouter := enableCORS(jsonContentTypeMiddleware(router))
+    enhancedRouter := enableCORS(jsonContentTypeMiddleware(router))
 
-	logger.Info("server starting", "port", 8000)
-	if err := http.ListenAndServe(":8000", enhancedRouter); err != nil {
-		logger.Error("server crashed", "error", err)
-	}
+    fmt.Println("Server starting on :8000...")
+    if err := http.ListenAndServe(":8000", enhancedRouter); err != nil {
+        logger.Error("server failed", "error", err)
+        os.Exit(1)
+    }
 }
 
 func healthCheck(db *sql.DB) http.HandlerFunc {
