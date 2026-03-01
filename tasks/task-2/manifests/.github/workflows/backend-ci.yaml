@@ -1,0 +1,101 @@
+name: Backend CI
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/backend/**'
+      - '.github/workflows/backend-ci.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/backend/**'
+
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: src/backend/go.sum
+
+      - name: Test
+        run: cd src/backend && go test -v ./...
+
+      - name: Determine Next Version
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          dry_run: true
+          tag_prefix: backend/v
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: src/backend
+
+      - name: Build Local Image
+        run: |
+          cd src/backend
+          docker build -t lenthenum/um-backend:scan-tmp .
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'lenthenum/um-backend:scan-tmp'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Build and Push Image
+        run: |
+          IF_PR="${{ github.event.pull_request.number }}"
+          BASE_TAG="${{ steps.tag_version.outputs.new_version }}"
+          
+          if [ -n "$IF_PR" ]; then
+            FINAL_TAG="${BASE_TAG}-pr${IF_PR}"
+          else
+            FINAL_TAG="${BASE_TAG}"
+          fi
+          
+          echo "Final Docker Tag: $FINAL_TAG"
+          cd src/backend
+          docker build -t lenthenum/um-backend:$FINAL_TAG .
+          docker push lenthenum/um-backend:$FINAL_TAG
+
+      - name: Update Chart.yaml
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: fjogeleit/yaml-update-action@v0.16.1
+        with:
+          valueFile: 'charts/backend/Chart.yaml' 
+          changes: |
+            {
+              "version": "${{ steps.tag_version.outputs.new_version }}",
+              "appVersion": "${{ steps.tag_version.outputs.new_version }}"
+            }
+          branch: main
+          createPR: false
+          targetBranch: "release/backend/v${{ steps.tag_version.outputs.new_version }}"
+          message: "chore: bump backend chart to ${{ steps.tag_version.outputs.new_version }} [skip ci]"
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Determine Next Version
+        id: tag_version_final
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          dry_run: false
+          tag_prefix: backend/v
